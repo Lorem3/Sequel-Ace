@@ -40,6 +40,7 @@
 #import "SPJSONFormatter.h"
 #import <SPMySQL/SPMySQL.h>
 #import "SPFunctions.h"
+#import "SPLogFieldDecrypt.h"
 
 #import "sequel-ace-Swift.h"
 
@@ -312,6 +313,23 @@ typedef enum {
 			[editSheetOpenButton setEnabled:NO];
 		}
 
+		// log 字段解密预览模式：从配置读取目标字段名，仅在 SPCustomQuery 调用时生效
+		BOOL isLogDecryptPreview = NO;
+		if ([callerInstance isKindOfClass:[SPCustomQuery class]]
+			&& [fieldName isEqualToString:[SPLogFieldDecrypt targetFieldName]]) {
+			isLogDecryptPreview = YES;
+			// 隐藏 segment / quicklook / open 等编辑控件
+			[editSheetSegmentControl setHidden:YES];
+			[editSheetQuickLookButton setHidden:YES];
+			[editSheetOpenButton setHidden:YES];
+			// 显示 Cancel，隐藏不可编辑专用 Cancel，OK 显示但禁用
+			[editSheetCancelButton setHidden:NO];
+			[editSheetIsNotEditableCancelButton setHidden:YES];
+			[editSheetOkButton setHidden:NO];
+			[editSheetOkButton setEnabled:NO];
+			[editSheetOkButton setKeyEquivalent:@""];
+		}
+
 		editSheetWillBeInitialized = YES;
 
 		encoding = anEncoding;
@@ -419,6 +437,11 @@ typedef enum {
 				stringValue = sheetEditData;
 			} while(0);
 
+			// log 字段解密预览：对展示字符串尝试解密替换（不改写 sheetEditData）
+			if (isLogDecryptPreview && [stringValue isKindOfClass:[NSString class]]) {
+				stringValue = [SPLogFieldDecrypt displayStringForLogText:stringValue];
+			}
+
 			[hexTextView setString:@""];
 
 			[hexTextView setHidden:YES];
@@ -446,6 +469,11 @@ typedef enum {
 
 		if (stringValue) {
 			[editTextView setString:stringValue];
+
+			// log 解密预览模式下文本区强制只读
+			if (isLogDecryptPreview) {
+				[editTextView setEditable:NO];
+			}
 
 			if (image == nil) {
 				if (!isBinary) {

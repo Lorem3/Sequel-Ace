@@ -1,4 +1,5 @@
 {
+  "originHash" : "6ca1b497a72ed21e2a9eb2b71b6c27726cb816252312e8b29c89a8198a4659d1",
   "pins" : [
     {
       "identity" : "alamofire",
@@ -12,10 +13,10 @@
     {
       "identity" : "appcenter-sdk-apple",
       "kind" : "remoteSourceControl",
-      "location" : "https://gitee.com/vitock/appcenter-sdk-apple",
+      "location" : "https://github.com/microsoft/appcenter-sdk-apple",
       "state" : {
-        "revision" : "70eecc6eec6ae48135a9e17c1a949b2a40abe9a8",
-        "version" : "4.3.3"
+        "revision" : "b2dc99cfedead0bad4e6573d86c5228c89cff332",
+        "version" : "4.4.3"
       }
     },
     {
@@ -30,10 +31,10 @@
     {
       "identity" : "plcrashreporter",
       "kind" : "remoteSourceControl",
-      "location" : "https://gitee.com/vitock/PLCrashReporter.git",
+      "location" : "https://github.com/microsoft/PLCrashReporter.git",
       "state" : {
-        "revision" : "59513acde6194d93617afcf7b2c81c88638a6af2",
-        "version" : "1.10.0"
+        "revision" : "81cdec2b3827feb03286cb297f4c501a8eb98df1",
+        "version" : "1.10.2"
       }
     },
     {
@@ -46,5 +47,5 @@
       }
     }
   ],
-  "version" : 2
+  "version" : 3
 }

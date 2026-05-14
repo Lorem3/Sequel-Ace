@@ -444,6 +444,7 @@
 		C9F92712162D39E60051CB2E /* toolbar-switch-to-browse.png in Resources */ = {isa = PBXBuildFile; fileRef = C9F92711162D39E60051CB2E /* toolbar-switch-to-browse.png */; };
 		C9F92714162D39FE0051CB2E /* toolbar-switch-to-browse@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = C9F92713162D39FE0051CB2E /* toolbar-switch-to-browse@2x.png */; };
 		D35577F52728C6CF002B3989 /* SPWindowTabAccessory.swift in Sources */ = {isa = PBXBuildFile; fileRef = D35577F42728C6CF002B3989 /* SPWindowTabAccessory.swift */; };
+		FD6C9A0C562C42CC901F2C73 /* SPLogFieldDecrypt.m in Sources */ = {isa = PBXBuildFile; fileRef = 0AC47FFE09F54530936F2ED7 /* SPLogFieldDecrypt.m */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -556,6 +557,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		0AC47FFE09F54530936F2ED7 /* SPLogFieldDecrypt.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = SPLogFieldDecrypt.m; sourceTree = "<group>"; };
 		1058C7A7FEA54F5311CA2CBB /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = /System/Library/Frameworks/Cocoa.framework; sourceTree = "<absolute>"; };
 		112730551180788A000737FD /* SPTableCopyTest.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SPTableCopyTest.m; sourceTree = "<group>"; };
 		1141A387117BBFF200126A28 /* SPTableCopy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SPTableCopy.h; sourceTree = "<group>"; };
@@ -1066,6 +1068,7 @@
 		9BE76C6E8377959C794385E5 /* SPHelpViewerController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SPHelpViewerController.h; sourceTree = "<group>"; };
 		9BE76CC0CCE3A4A74E3E8D5E /* SPFillView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SPFillView.h; sourceTree = "<group>"; };
 		9BE76F9BF9BDA2921CDD05AF /* SPFilterTableController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SPFilterTableController.h; sourceTree = "<group>"; };
+		9F82B26BBCD0460B9389AA46 /* SPLogFieldDecrypt.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = SPLogFieldDecrypt.h; sourceTree = "<group>"; };
 		B51D6B9D114C310C0074704E /* toolbar-switch-to-table-triggers.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "toolbar-switch-to-table-triggers.png"; sourceTree = "<group>"; };
 		B52460D30F8EF92300171639 /* SPArrayAdditions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SPArrayAdditions.h; sourceTree = "<group>"; };
 		B52460D40F8EF92300171639 /* SPArrayAdditions.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SPArrayAdditions.m; sourceTree = "<group>"; };
@@ -2216,6 +2219,8 @@
 				50A77DA61E8EB903007466BC /* SPCompatibility.h */,
 				5174122E2573E10C00EB6935 /* SPPrintUtility.h */,
 				5174122F2573E10C00EB6935 /* SPPrintUtility.m */,
+				9F82B26BBCD0460B9389AA46 /* SPLogFieldDecrypt.h */,
+				0AC47FFE09F54530936F2ED7 /* SPLogFieldDecrypt.m */,
 				1A11E4FC25A32789001CB721 /* SPPanelOptions.h */,
 				1A11E50325A327F1001CB721 /* SPPanelOptions.m */,
 			);
@@ -2955,6 +2960,7 @@
 				171312CE109D23C700FB465F /* SPTableTextFieldCell.m in Sources */,
 				174CE14210AB9281008F892B /* SPProcessListController.m in Sources */,
 				517412302573E10C00EB6935 /* SPPrintUtility.m in Sources */,
+				FD6C9A0C562C42CC901F2C73 /* SPLogFieldDecrypt.m in Sources */,
 				1792C13710AD75C800ABE758 /* SPServerVariablesController.m in Sources */,
 				1A70BC6625EF4243004BB992 /* ReportExceptionApplication.m in Sources */,
 				5089B0271BE714E300E226CD /* SPIdMenu.m in Sources */,
@@ -3255,6 +3261,10 @@
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = (
+					"$(ARCHS_STANDARD)",
+					x86_64,
+				);
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_LINK_OBJC_RUNTIME = NO;
@@ -3360,7 +3370,7 @@
 					"$(inherited)",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.sequel-ace.sequel-ace1334";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.sequel-ace.sequel-aceDec";
 				PRODUCT_MODULE_NAME = Sequel_Ace;
 				PRODUCT_NAME = "Sequel Ace";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -3557,6 +3567,10 @@
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = (
+					"$(ARCHS_STANDARD)",
+					x86_64,
+				);
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_LINK_OBJC_RUNTIME = NO;
@@ -3807,7 +3821,7 @@
 					"$(inherited)",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.sequel-ace.sequel-ace1334";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.sequel-ace.sequel-aceDec";
 				PRODUCT_MODULE_NAME = Sequel_Ace;
 				PRODUCT_NAME = "Sequel Ace";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -3857,7 +3871,7 @@
 					"$(inherited)",
 				);
 				MACOSX_DEPLOYMENT_TARGET = 10.13;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.sequel-ace.sequel-ace1334";
+				PRODUCT_BUNDLE_IDENTIFIER = "com.sequel-ace.sequel-aceDec";
 				PRODUCT_MODULE_NAME = Sequel_Ace;
 				PRODUCT_NAME = "Sequel Ace";
 				PROVISIONING_PROFILE_SPECIFIER = "";
@@ -3875,6 +3889,10 @@
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = (
+					"$(ARCHS_STANDARD)",
+					x86_64,
+				);
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_LINK_OBJC_RUNTIME = NO;
@@ -3959,6 +3977,10 @@
 			buildSettings = {
 				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
 				ALWAYS_SEARCH_USER_PATHS = NO;
+				ARCHS = (
+					"$(ARCHS_STANDARD)",
+					x86_64,
+				);
 				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CLANG_LINK_OBJC_RUNTIME = NO;
@@ -4111,7 +4133,7 @@
 		};
 		515D303D25BD7DE60021CF1E /* XCRemoteSwiftPackageReference "appcenter-sdk-apple" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://gitee.com/vitock/appcenter-sdk-apple";
+			repositoryURL = "https://github.com/microsoft/appcenter-sdk-apple";
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 4.1.0;

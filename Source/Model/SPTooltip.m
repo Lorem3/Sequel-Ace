@@ -318,7 +318,7 @@ static CGFloat slow_in_out (CGFloat t)
 + (NSPoint)caretPosition
 {
 	NSPoint pos;
-	id fr = [[NSApp keyWindow] firstResponder];
+    NSTextView *fr = [[NSApp keyWindow] firstResponder];
 
 	//If first responder is a textview return the caret position
 	if(([fr isMemberOfClass:[NSTextView class]] && [fr alignment] == NSTextAlignmentLeft) || [[[fr class] description] isEqualToString:@"SPTextView"]) {
