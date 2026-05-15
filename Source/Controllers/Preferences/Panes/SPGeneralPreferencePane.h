@@ -30,6 +30,8 @@
 
 #import "SPPreferencePane.h"
 
+@class NSTextView;
+
 /**
  * @class SPGeneralPreferencePane SPGeneralPreferencePane.h
  *
@@ -43,10 +45,13 @@
 	
 	IBOutlet NSTextField *globalResultFontName;
 	IBOutlet NSPopUpButton *defaultFavoritePopup;
+	IBOutlet NSButton *reloadCfgJsonButton;
+	IBOutlet NSTextView *sequelAceCfgTextView;
 }
 
 - (IBAction)updateDefaultFavorite:(id)sender;
 - (IBAction)showGlobalResultFontPanel:(id)sender;
+- (IBAction)reloadSequelAceCfgJson:(id)sender;
 
 - (void)updateDefaultFavoritePopup;
 - (void)updateDisplayedFontName;

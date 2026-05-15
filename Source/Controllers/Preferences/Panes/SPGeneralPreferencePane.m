@@ -36,12 +36,22 @@
 #import "SPGroupNode.h"
 
 #import "sequel-ace-Swift.h"
+#import "SPLogFieldDecrypt.h"
+
+static NSString *SPSequelAceCfgJSONPath(void) {
+	return [@"~/.SequelAce/cfg.json" stringByExpandingTildeInPath];
+}
+
+static NSString *SPDefaultSequelAceCfgTemplate(void) {
+	return @"{\n    \"KEY\":\"Hex Aes KEY \",\n    \"field\": \"log\",\n    \"encColor\": \"#ffc84033\"\n}";
+}
 
 static NSString *SPDatabaseImage = @"database-small";
 
 @interface SPGeneralPreferencePane ()
 
 - (NSArray *)_constructMenuItemsForNode:(SPTreeNode *)node atLevel:(NSUInteger)level;
+- (void)_loadSequelAceCfgTextIntoEditor;
 
 @end
 
@@ -56,6 +66,25 @@ static NSString *SPDatabaseImage = @"database-small";
 	folderImage = [[NSWorkspace sharedWorkspace] iconForFileType:NSFileTypeForHFSTypeCode(kGenericFolderIcon)];
 	
 	[folderImage setSize:NSMakeSize(16, 16)];
+
+	if (reloadCfgJsonButton) {
+		[reloadCfgJsonButton setTitle:NSLocalizedString(@"Save and Reload ~/.SequelAce/cfg.json", @"Preferences General: button to validate JSON, save cfg.json, and reload decrypt settings")];
+		[reloadCfgJsonButton setToolTip:NSLocalizedString(@"Validate JSON, save to ~/.SequelAce/cfg.json, then reload decrypt settings (key, field, highlight color).", @"Preferences General: tooltip for save cfg.json button")];
+	}
+
+	if (sequelAceCfgTextView) {
+		[sequelAceCfgTextView setAutomaticSpellingCorrectionEnabled:NO];
+		if (@available(macOS 10.12, *)) {
+			[sequelAceCfgTextView setAutomaticQuoteSubstitutionEnabled:NO];
+			[sequelAceCfgTextView setAutomaticDashSubstitutionEnabled:NO];
+			[sequelAceCfgTextView setAutomaticTextReplacementEnabled:NO];
+		}
+		NSFont *monoFont = [NSFont fontWithName:@"Menlo" size:12];
+		if (!monoFont) {
+			monoFont = [NSFont userFixedPitchFontOfSize:12];
+		}
+		[sequelAceCfgTextView setFont:monoFont];
+	}
 }
 
 #pragma mark -
@@ -77,6 +106,68 @@ static NSString *SPDatabaseImage = @"database-small";
 	[prefs setBool:([defaultFavoritePopup indexOfSelectedItem] == 0) forKey:SPSelectLastFavoriteUsed];
 			
 	[prefs setInteger:[sender tag] forKey:SPDefaultFavorite];
+}
+
+- (IBAction)reloadSequelAceCfgJson:(id)sender
+{
+	(void)sender;
+	if (!sequelAceCfgTextView) {
+		[SPLogFieldDecrypt reloadCfgFromDisk];
+		return;
+	}
+
+	NSString *raw = [sequelAceCfgTextView string];
+	NSData *data = [raw dataUsingEncoding:NSUTF8StringEncoding];
+	if (!data) {
+		NSAlert *alert = [[NSAlert alloc] init];
+		[alert setMessageText:NSLocalizedString(@"Invalid JSON", @"Preferences General: cfg.json JSON parse error alert title")];
+		[alert setInformativeText:NSLocalizedString(@"The text could not be encoded as UTF-8.", @"Preferences General: UTF-8 encoding error for cfg editor")];
+		[alert runModal];
+		return;
+	}
+
+	NSError *jsonError = nil;
+	id parsed = [NSJSONSerialization JSONObjectWithData:data options:0 error:&jsonError];
+	if (!parsed || jsonError) {
+		NSAlert *alert = [[NSAlert alloc] init];
+		[alert setMessageText:NSLocalizedString(@"Invalid JSON", @"Preferences General: cfg.json JSON parse error alert title")];
+		[alert setInformativeText:jsonError.localizedDescription ?: @""];
+		[alert runModal];
+		return;
+	}
+
+	if (![parsed isKindOfClass:[NSDictionary class]]) {
+		NSAlert *alert = [[NSAlert alloc] init];
+		[alert setMessageText:NSLocalizedString(@"Invalid cfg.json", @"Preferences General: cfg.json must be a JSON object alert title")];
+		[alert setInformativeText:NSLocalizedString(@"The file must contain a JSON object { … } at the root (not an array or primitive).", @"Preferences General: cfg.json must be a JSON object alert message")];
+		[alert runModal];
+		return;
+	}
+
+	NSString *path = SPSequelAceCfgJSONPath();
+	NSString *dir = [path stringByDeletingLastPathComponent];
+	NSFileManager *fm = [NSFileManager defaultManager];
+	NSError *dirError = nil;
+	if (![fm fileExistsAtPath:dir]) {
+		if (![fm createDirectoryAtPath:dir withIntermediateDirectories:YES attributes:nil error:&dirError]) {
+			NSAlert *alert = [[NSAlert alloc] init];
+			[alert setMessageText:NSLocalizedString(@"Could Not Create Folder", @"Preferences General: could not create ~/.SequelAce folder alert title")];
+			[alert setInformativeText:dirError.localizedDescription];
+			[alert runModal];
+			return;
+		}
+	}
+
+	NSError *writeError = nil;
+	if (![raw writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:&writeError]) {
+		NSAlert *alert = [[NSAlert alloc] init];
+		[alert setMessageText:NSLocalizedString(@"Could Not Save cfg.json", @"Preferences General: could not write cfg.json alert title")];
+		[alert setInformativeText:writeError.localizedDescription];
+		[alert runModal];
+		return;
+	}
+
+	[SPLogFieldDecrypt reloadCfgFromDisk];
 }
 
 - (IBAction)showGlobalResultFontPanel:(id)sender {
@@ -192,6 +283,39 @@ static NSString *SPDatabaseImage = @"database-small";
 	return items;
 }
 
+- (void)_loadSequelAceCfgTextIntoEditor
+{
+	if (!sequelAceCfgTextView) {
+		return;
+	}
+
+	NSString *path = SPSequelAceCfgJSONPath();
+	NSFileManager *fm = [NSFileManager defaultManager];
+	NSString *text = nil;
+	if ([fm fileExistsAtPath:path]) {
+		NSError *readError = nil;
+		text = [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:&readError];
+		if (text.length == 0) {
+			text = nil;
+		}
+	}
+
+	if (!text) {
+		text = SPDefaultSequelAceCfgTemplate();
+		NSString *dir = [path stringByDeletingLastPathComponent];
+		NSError *dirError = nil;
+		if (![fm fileExistsAtPath:dir]) {
+			[fm createDirectoryAtPath:dir withIntermediateDirectories:YES attributes:nil error:&dirError];
+		}
+		NSError *writeError = nil;
+		if ([fm fileExistsAtPath:dir] && [text writeToFile:path atomically:YES encoding:NSUTF8StringEncoding error:&writeError]) {
+			[SPLogFieldDecrypt reloadCfgFromDisk];
+		}
+	}
+
+	[sequelAceCfgTextView setString:text];
+}
+
 #pragma mark -
 #pragma mark Preference pane protocol methods
 
@@ -228,6 +352,7 @@ static NSString *SPDatabaseImage = @"database-small";
 {
 	[self updateDisplayedFontName];
 	[self updateDefaultFavoritePopup];
+	[self _loadSequelAceCfgTextIntoEditor];
 }
 
 @end

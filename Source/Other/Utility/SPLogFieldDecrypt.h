@@ -35,9 +35,14 @@ NS_ASSUME_NONNULL_BEGIN
 /**
  * 从 cfg.json 读取 encColor 字段（格式 #RRGGBBAA，如 #FFE0E0FF）。
  * 若字段缺失或格式非法，返回默认淡红色。
- * 结果随配置一次性缓存。
+ * 颜色在 cfg 从磁盘重新加载后会按 encColor 重新计算。
  */
 + (NSColor *)encryptedCellColor;
+
+/**
+ * 从磁盘重新读取 ~/.SequelAce/cfg.json，并刷新内存缓存与 encColor。
+ */
++ (void)reloadCfgFromDisk;
 
 /**
  * 对 logText 尝试执行解密展示替换：

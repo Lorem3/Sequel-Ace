@@ -19,22 +19,39 @@ static NSString * const kDefaultFieldName = @"log";
 static NSString * const kLinePrefixLF   = @"\ni.";
 static NSString * const kLinePrefixCRLF = @"\r\ni.";
 
+// 与 encColor 缓存联动：仅在 _loadCfg 真正从磁盘读入后自增
+static NSUInteger s_cfgDiskReadSerial = 0;
+
+// 为 YES 时下一次 _loadCfg 读磁盘；reloadCfgFromDisk 置为 YES。首次启动为 YES。
+static BOOL s_cfgDiskReadRequired = YES;
+
 @implementation SPLogFieldDecrypt
 
 #pragma mark - 配置读取
 
 + (nullable NSDictionary *)_loadCfg {
     static NSDictionary *cachedCfg = nil;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        NSString *cfgPath = [@"~/.SequelAce/cfg.json" stringByExpandingTildeInPath];
-        NSData *data = [NSData dataWithContentsOfFile:cfgPath];
-        if (!data) return;
-        NSError *err = nil;
-        id obj = [NSJSONSerialization JSONObjectWithData:data options:0 error:&err];
-        if (err || ![obj isKindOfClass:[NSDictionary class]]) return;
-        cachedCfg = (NSDictionary *)obj;
-    });
+    if (!s_cfgDiskReadRequired && cachedCfg != nil) {
+        return cachedCfg;
+    }
+    s_cfgDiskReadRequired = NO;
+
+    NSString *cfgPath = [@"~/.SequelAce/cfg.json" stringByExpandingTildeInPath];
+    NSData *data = [NSData dataWithContentsOfFile:cfgPath];
+    if (!data) {
+        s_cfgDiskReadSerial++;
+        cachedCfg = nil;
+        return nil;
+    }
+    NSError *err = nil;
+    id obj = [NSJSONSerialization JSONObjectWithData:data options:0 error:&err];
+    if (err || ![obj isKindOfClass:[NSDictionary class]]) {
+        s_cfgDiskReadSerial++;
+        cachedCfg = nil;
+        return nil;
+    }
+    cachedCfg = (NSDictionary *)obj;
+    s_cfgDiskReadSerial++;
     return cachedCfg;
 }
 
@@ -49,29 +66,45 @@ static NSString * const kLinePrefixCRLF = @"\r\ni.";
 
 + (NSColor *)encryptedCellColor {
     static NSColor *cachedColor = nil;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
+    static NSUInteger encColorBuiltCfgSerial = 0;
+
+    NSDictionary *cfg = [self _loadCfg];
+    if (encColorBuiltCfgSerial != s_cfgDiskReadSerial) {
+        encColorBuiltCfgSerial = s_cfgDiskReadSerial;
         // 默认淡红色
         NSColor *defaultColor = [NSColor colorWithCalibratedRed:1.0 green:0.88 blue:0.88 alpha:1.0];
-        NSDictionary *cfg = [self _loadCfg];
         NSString *hex = cfg[@"encColor"];
-        if (![hex isKindOfClass:[NSString class]]) { cachedColor = defaultColor; return; }
+        if (![hex isKindOfClass:[NSString class]]) {
+            cachedColor = defaultColor;
+            return cachedColor;
+        }
 
         // 去掉前缀 #，期望格式 RRGGBBAA（8位十六进制）
         NSString *h = [hex hasPrefix:@"#"] ? [hex substringFromIndex:1] : hex;
-        if (h.length != 8) { cachedColor = defaultColor; return; }
+        if (h.length != 8) {
+            cachedColor = defaultColor;
+            return cachedColor;
+        }
 
         unsigned int rgba = 0;
         NSScanner *scanner = [NSScanner scannerWithString:h];
-        if (![scanner scanHexInt:&rgba]) { cachedColor = defaultColor; return; }
+        if (![scanner scanHexInt:&rgba]) {
+            cachedColor = defaultColor;
+            return cachedColor;
+        }
 
         CGFloat r = ((rgba >> 24) & 0xFF) / 255.0;
         CGFloat g = ((rgba >> 16) & 0xFF) / 255.0;
         CGFloat b = ((rgba >>  8) & 0xFF) / 255.0;
         CGFloat a = ( rgba        & 0xFF) / 255.0;
         cachedColor = [NSColor colorWithCalibratedRed:r green:g blue:b alpha:a];
-    });
+    }
     return cachedColor;
+}
+
++ (void)reloadCfgFromDisk {
+    s_cfgDiskReadRequired = YES;
+    (void)[self _loadCfg];
 }
 
 + (BOOL)containsEncryptedContent:(NSString *)text {

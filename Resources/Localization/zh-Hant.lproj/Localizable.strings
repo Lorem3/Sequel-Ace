@@ -1451,6 +1451,30 @@
 /* general preference pane tooltip */
 "General Preferences" = "通用偏好設置";
 
+/* Preferences General: button to validate JSON, save ~/.SequelAce/cfg.json, and reload decrypt settings */
+"Save and Reload ~/.SequelAce/cfg.json" = "儲存並重新載入 ~/.SequelAce/cfg.json";
+
+/* Preferences General: tooltip for save cfg.json button */
+"Validate JSON, save to ~/.SequelAce/cfg.json, then reload decrypt settings (key, field, highlight color)." = "驗證 JSON，儲存到 ~/.SequelAce/cfg.json，然後重新載入解密相關設定（金鑰、欄位名稱、高亮顏色）。";
+
+/* Preferences General: cfg.json JSON parse error alert title */
+"Invalid JSON" = "JSON 無效";
+
+/* Preferences General: cfg.json must be a JSON object alert title */
+"Invalid cfg.json" = "cfg.json 無效";
+
+/* Preferences General: cfg.json must be a JSON object alert message */
+"The file must contain a JSON object { … } at the root (not an array or primitive)." = "檔案根節點必須是 JSON 物件 { … }（不能是陣列或其它類型）。";
+
+/* Preferences General: could not write cfg.json alert title */
+"Could Not Save cfg.json" = "無法儲存 cfg.json";
+
+/* Preferences General: could not create ~/.SequelAce folder alert title */
+"Could Not Create Folder" = "無法建立資料夾";
+
+/* Preferences General: UTF-8 encoding error for cfg editor */
+"The text could not be encoded as UTF-8." = "文字無法以 UTF-8 編碼。";
+
 /* Bundle Editor : Outline View : 'General' item : tooltip */
 "General Scope\ncommands will run application-wide" = "通用範圍\n指令將在整個應用程序上運行";
 
