@@ -287,9 +287,12 @@ static NSString * const kLinePrefixCRLF = @"\r\ni.";
         NSString *b64    = b64List[(NSUInteger)i];
         NSString *plain  = [self _decryptBase64Line:b64 key:keyData];
         if (!plain) continue; // 解密失败：保留原文
-
+        
         NSString *replacement = [NSString stringWithFormat:
-            @"\n\n------------------------------ [DECRYPT TXT BEGIN] ------------------------------\n\n%@\n\n------------------------------ [DECRYPT TXT END]  ------------------------------\n\n",
+            (@"\n============= [DECRYPT TXT BEGIN] =============\n\n"
+            @"%@"
+             @"\n\n============= [ DECRYPT TXT END ] =============\n"
+             ),
             plain];
         [result replaceCharactersInRange:range withString:replacement];
         anyReplaced = YES;
