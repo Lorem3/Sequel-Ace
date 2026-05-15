@@ -289,7 +289,7 @@ static NSString * const kLinePrefixCRLF = @"\r\ni.";
         if (!plain) continue; // 解密失败：保留原文
 
         NSString *replacement = [NSString stringWithFormat:
-            @"\n\n------------------------------[DECRYPT TXT BEGIN] ------------------------------\n\n%@\n\n------------------------------[DECRYPT TXT END]  ------------------------------\n\n",
+            @"\n\n------------------------------ [DECRYPT TXT BEGIN] ------------------------------\n\n%@\n\n------------------------------ [DECRYPT TXT END]  ------------------------------\n\n",
             plain];
         [result replaceCharactersInRange:range withString:replacement];
         anyReplaced = YES;
