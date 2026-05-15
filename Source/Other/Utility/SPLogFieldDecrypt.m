@@ -6,6 +6,7 @@
 #import "SPLogFieldDecrypt.h"
 #import "SPDataAdditions.h"
 #import <CommonCrypto/CommonCrypto.h>
+#import <AppKit/AppKit.h>
 #include <zlib.h>
 
 // cfg.json 中的 key 名称
@@ -44,6 +45,39 @@ static NSString * const kLinePrefixCRLF = @"\r\ni.";
         return field;
     }
     return kDefaultFieldName;
+}
+
++ (NSColor *)encryptedCellColor {
+    static NSColor *cachedColor = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        // 默认淡红色
+        NSColor *defaultColor = [NSColor colorWithCalibratedRed:1.0 green:0.88 blue:0.88 alpha:1.0];
+        NSDictionary *cfg = [self _loadCfg];
+        NSString *hex = cfg[@"encColor"];
+        if (![hex isKindOfClass:[NSString class]]) { cachedColor = defaultColor; return; }
+
+        // 去掉前缀 #，期望格式 RRGGBBAA（8位十六进制）
+        NSString *h = [hex hasPrefix:@"#"] ? [hex substringFromIndex:1] : hex;
+        if (h.length != 8) { cachedColor = defaultColor; return; }
+
+        unsigned int rgba = 0;
+        NSScanner *scanner = [NSScanner scannerWithString:h];
+        if (![scanner scanHexInt:&rgba]) { cachedColor = defaultColor; return; }
+
+        CGFloat r = ((rgba >> 24) & 0xFF) / 255.0;
+        CGFloat g = ((rgba >> 16) & 0xFF) / 255.0;
+        CGFloat b = ((rgba >>  8) & 0xFF) / 255.0;
+        CGFloat a = ( rgba        & 0xFF) / 255.0;
+        cachedColor = [NSColor colorWithCalibratedRed:r green:g blue:b alpha:a];
+    });
+    return cachedColor;
+}
+
++ (BOOL)containsEncryptedContent:(NSString *)text {
+    if (text.length == 0) return NO;
+    return ([text rangeOfString:kLinePrefixLF].location != NSNotFound
+            || [text rangeOfString:kLinePrefixCRLF].location != NSNotFound);
 }
 
 + (nullable NSData *)_aesKeyFromCfg:(NSDictionary *)cfg {

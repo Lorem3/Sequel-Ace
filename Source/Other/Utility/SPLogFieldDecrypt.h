@@ -27,6 +27,19 @@ NS_ASSUME_NONNULL_BEGIN
 + (NSString *)targetFieldName;
 
 /**
+ * 快速判断字符串中是否含有加密行（格式：换行 + "i." + Base64内容）。
+ * 不执行解密，仅用于列表视图的背景色判断。
+ */
++ (BOOL)containsEncryptedContent:(NSString *)text;
+
+/**
+ * 从 cfg.json 读取 encColor 字段（格式 #RRGGBBAA，如 #FFE0E0FF）。
+ * 若字段缺失或格式非法，返回默认淡红色。
+ * 结果随配置一次性缓存。
+ */
++ (NSColor *)encryptedCellColor;
+
+/**
  * 对 logText 尝试执行解密展示替换：
  *   - 查找格式为 "i.<Base64密文>" 的行（兼容 \n 和 \r\n 换行）
  *     例：...\ni.ABC123==\n...

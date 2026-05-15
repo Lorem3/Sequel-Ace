@@ -49,6 +49,7 @@
 #import "SPTextView.h"
 #import "RegexKitLite.h"
 #import "SPThreadAdditions.h"
+#import "SPLogFieldDecrypt.h"
 #import "SPConstants.h"
 #import "SPAppController.h"
 #import "SPBundleHTMLOutputController.h"
@@ -2271,6 +2272,27 @@ typedef void (^QueryProgressHandler)(QueryProgress *);
         }
         
         [cell setTextColor:showCellAsGray ? [NSColor lightGrayColor] : [NSColor controlTextColor]];
+
+        // log 列含加密内容时，仅高亮该列单元格，颜色从 cfg.json encColor 读取
+        if ([cell respondsToSelector:@selector(setBackgroundColor:)]
+            && [cell respondsToSelector:@selector(setDrawsBackground:)]
+            && columnIndex < [cqColumnDefinition count]) {
+            NSString *colName = [[cqColumnDefinition objectAtIndex:columnIndex] objectForKey:@"name"];
+            BOOL isTargetField = [colName isEqualToString:[SPLogFieldDecrypt targetFieldName]];
+            BOOL hasEncrypted  = NO;
+            if (isTargetField && !showCellAsGray) {
+                id cellValue = [resultData cellDataAtRow:rowIndex column:columnIndex];
+                if ([cellValue isKindOfClass:[NSString class]]) {
+                    hasEncrypted = [SPLogFieldDecrypt containsEncryptedContent:cellValue];
+                }
+            }
+            if (hasEncrypted) {
+                [cell setDrawsBackground:YES];
+                [cell setBackgroundColor:[SPLogFieldDecrypt encryptedCellColor]];
+            } else {
+                [cell setDrawsBackground:NO];
+            }
+        }
     }
 }
 
