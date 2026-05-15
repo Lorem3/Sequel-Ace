@@ -40,9 +40,19 @@
 	NSInteger lastLinkColumn;
 	NSInteger lastLinkRow;
 	NSInteger drawState;
+
+	CGFloat sp_encryptedLogIndicatorWidth;
+	NSColor *sp_encryptedLogIndicatorColor;
+	CGFloat sp_encryptedLogLeadingReserve;
 }
 
 @property (readwrite, assign) BOOL linkActive;
+
+/** Left edge strip for encrypted log column; 0 hides it. */
+@property (nonatomic, assign) CGFloat sp_encryptedLogIndicatorWidth;
+@property (nonatomic, strong) NSColor *sp_encryptedLogIndicatorColor;
+/** Extra leading inset for log column so plain and encrypted rows align (typically 5 + 2). */
+@property (nonatomic, assign) CGFloat sp_encryptedLogLeadingReserve;
 
 - (void) setTarget:(id)theTarget action:(SEL)theAction;
 - (NSInteger) getClickedColumn;

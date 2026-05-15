@@ -33,6 +33,9 @@
 @implementation SPTextAndLinkCell
 
 @synthesize linkActive;
+@synthesize sp_encryptedLogIndicatorWidth;
+@synthesize sp_encryptedLogIndicatorColor;
+@synthesize sp_encryptedLogLeadingReserve;
 
 /**
  * Provide a method to derive the link rect from a cell rect.
@@ -60,6 +63,10 @@ static inline NSRect SPTextLinkRectFromCellRect(NSRect inRect)
 		
 		lastLinkColumn = NSNotFound;
 		lastLinkRow = NSNotFound;
+
+		sp_encryptedLogIndicatorWidth = 0;
+		sp_encryptedLogIndicatorColor = nil;
+		sp_encryptedLogLeadingReserve = 0;
 	}
 	return self;
 }
@@ -81,6 +88,9 @@ static inline NSRect SPTextLinkRectFromCellRect(NSRect inRect)
 	if (linkButton) copy->linkButton = [linkButton copyWithZone:zone];
 	copy->linkTarget = linkTarget;
 	copy->linkAction = linkAction;
+	copy->sp_encryptedLogIndicatorWidth = sp_encryptedLogIndicatorWidth;
+	copy->sp_encryptedLogIndicatorColor = sp_encryptedLogIndicatorColor;
+	copy->sp_encryptedLogLeadingReserve = sp_encryptedLogLeadingReserve;
 	return copy;
 }
 
@@ -119,16 +129,28 @@ static inline NSRect SPTextLinkRectFromCellRect(NSRect inRect)
  */
 - (void)drawInteriorWithFrame:(NSRect)aRect inView:(NSView *)controlView
 {
+	CGFloat reserve = sp_encryptedLogLeadingReserve;
+	NSRect contentRect = aRect;
+	if (reserve > 0) {
+		contentRect.origin.x += reserve;
+		contentRect.size.width -= reserve;
+	}
+
+	if (sp_encryptedLogIndicatorWidth > 0 && sp_encryptedLogIndicatorColor) {
+		NSRect barRect = NSMakeRect(NSMinX(aRect), NSMinY(aRect), sp_encryptedLogIndicatorWidth, NSHeight(aRect));
+		[sp_encryptedLogIndicatorColor setFill];
+		NSRectFill(barRect);
+	}
 
 	// Fast case for no arrow
 	if (!hasLink || !linkActive) {
-		[super drawInteriorWithFrame:aRect inView:controlView];
+		[super drawInteriorWithFrame:contentRect inView:controlView];
 		return;
 	}
 	
 	// Set up new rects
-	NSRect textRect = NSMakeRect(aRect.origin.x, aRect.origin.y, aRect.size.width - 18, aRect.size.height);
-	NSRect linkRect = SPTextLinkRectFromCellRect(aRect);
+	NSRect textRect = NSMakeRect(contentRect.origin.x, contentRect.origin.y, contentRect.size.width - 18, contentRect.size.height);
+	NSRect linkRect = SPTextLinkRectFromCellRect(contentRect);
 
 	// Draw the text
 	[super drawInteriorWithFrame:textRect inView:controlView];

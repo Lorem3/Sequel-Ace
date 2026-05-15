@@ -2273,10 +2273,8 @@ typedef void (^QueryProgressHandler)(QueryProgress *);
         
         [cell setTextColor:showCellAsGray ? [NSColor lightGrayColor] : [NSColor controlTextColor]];
 
-        // log 列含加密内容时，仅高亮该列单元格，颜色从 cfg.json encColor 读取
-        if ([cell respondsToSelector:@selector(setBackgroundColor:)]
-            && [cell respondsToSelector:@selector(setDrawsBackground:)]
-            && columnIndex < [cqColumnDefinition count]) {
+        // log 列：与加密行相同的左侧缩进（5pt 条 + 2pt 间距）；仅含加密片段时绘制色条
+        if ([cell isKindOfClass:[SPTextAndLinkCell class]] && columnIndex < [cqColumnDefinition count]) {
             NSString *colName = [[cqColumnDefinition objectAtIndex:columnIndex] objectForKey:@"name"];
             BOOL isTargetField = [colName isEqualToString:[SPLogFieldDecrypt targetFieldName]];
             BOOL hasEncrypted  = NO;
@@ -2286,11 +2284,23 @@ typedef void (^QueryProgressHandler)(QueryProgress *);
                     hasEncrypted = [SPLogFieldDecrypt containsEncryptedContent:cellValue];
                 }
             }
-            if (hasEncrypted) {
-                [cell setDrawsBackground:YES];
-                [cell setBackgroundColor:[SPLogFieldDecrypt encryptedCellColor]];
+            SPTextAndLinkCell *linkCell = (SPTextAndLinkCell *)cell;
+            if (isTargetField) {
+                [linkCell setSp_encryptedLogLeadingReserve:7.0];
+                if (!showCellAsGray && hasEncrypted) {
+                    [linkCell setSp_encryptedLogIndicatorWidth:5.0];
+                    [linkCell setSp_encryptedLogIndicatorColor:[SPLogFieldDecrypt encryptedCellColor]];
+                } else {
+                    [linkCell setSp_encryptedLogIndicatorWidth:0];
+                    [linkCell setSp_encryptedLogIndicatorColor:nil];
+                }
             } else {
-                [cell setDrawsBackground:NO];
+                [linkCell setSp_encryptedLogLeadingReserve:0];
+                [linkCell setSp_encryptedLogIndicatorWidth:0];
+                [linkCell setSp_encryptedLogIndicatorColor:nil];
+            }
+            if ([linkCell respondsToSelector:@selector(setDrawsBackground:)]) {
+                [linkCell setDrawsBackground:NO];
             }
         }
     }
