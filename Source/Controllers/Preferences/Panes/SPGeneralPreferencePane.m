@@ -43,7 +43,7 @@ static NSString *SPSequelAceCfgJSONPath(void) {
 }
 
 static NSString *SPDefaultSequelAceCfgTemplate(void) {
-	return @"{\n    \"KEY\":\"Hex Aes KEY \",\n    \"field\": \"log\",\n    \"encColor\": \"#ffc84033\"\n}";
+	return @"{\n    \"KEY\": \"Hex Aes KEY\",\n    \"KEY_OLD\": \"Hex Aes KEY for a./o. lines\",\n    \"field\": \"log\",\n    \"encColor\": \"#ffc84033\"\n}";
 }
 
 static NSString *SPDatabaseImage = @"database-small";

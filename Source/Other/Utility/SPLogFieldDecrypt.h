@@ -5,8 +5,10 @@
 //  Provides AES-ECB decryption for designated log fields.
 //  Configuration is read from ~/.SequelAce/cfg.json:
 //    {
-//      "KEY":   "<hex-encoded AES key, 32 or 64 hex chars>",
-//      "field": "<column name to target, default: log>"
+//      "KEY":      "<hex-encoded AES key, 32 or 64 hex chars>",
+//      "KEY_OLD":  "<hex-encoded AES key for a./o. lines>",
+//      "field":    "<column name to target, default: log>",
+//      "encColor": "#RRGGBBAA"
 //    }
 //
 
@@ -16,7 +18,6 @@ NS_ASSUME_NONNULL_BEGIN
 
 /**
  * 读取 ~/.SequelAce/cfg.json，提供 log 字段自动 AES-ECB 解密能力。
- * 线程安全：内部每次调用重新读配置文件（预览场景频率极低，无需缓存）。
  */
 @interface SPLogFieldDecrypt : NSObject
 
@@ -27,8 +28,11 @@ NS_ASSUME_NONNULL_BEGIN
 + (NSString *)targetFieldName;
 
 /**
- * 快速判断字符串中是否含有加密行（格式：换行 + "i." + Base64内容）。
- * 不执行解密，仅用于列表视图的背景色判断。
+ * 快速判断字符串中是否含有加密行，不执行解密，仅用于列表视图的色条标记。
+ * 支持格式（兼容 \n 与 \r\n 换行）：
+ *   - \ni.<Base64>  使用 KEY
+ *   - \na.<Base64>  使用 KEY_OLD（双层 Base64 + Gzip）
+ *   - \no.<Base64>  使用 KEY_OLD（AES 直出明文）
  */
 + (BOOL)containsEncryptedContent:(NSString *)text;
 
@@ -46,16 +50,11 @@ NS_ASSUME_NONNULL_BEGIN
 
 /**
  * 对 logText 尝试执行解密展示替换：
- *   - 查找格式为 "i.<Base64密文>" 的行（兼容 \n 和 \r\n 换行）
- *     例：...\ni.ABC123==\n...
- *   - 提取 "i." 之后到行尾的 Base64 内容
- *   - Base64 → AES-ECB/PKCS7 解密 → Gzip 解压 → UTF-8 校验
- *   - 若成功，替换 "i.<Base64>" 为：
- *       [decrypt]
- *       --------------- begin----------------------------------
- *       <plaintext>
- *       ---------------------------------------end ----------------------
- *   - 支持同一 logText 中存在多个加密行，逐一替换
+ *   - \ni.<Base64>：Base64 → AES-ECB(KEY) → Gzip → UTF-8
+ *   - \na.<Base64>：Base64 → AES-ECB(KEY_OLD) → Base64 → Gzip → UTF-8
+ *   - \no.<Base64>：Base64 → AES-ECB(KEY_OLD) → UTF-8 明文
+ *   - 若成功，将 "x.<Base64>" 替换为 [DECRYPT TXT BEGIN/END] 包裹的明文块
+ *   - 支持同一 logText 中存在多种格式、多行加密，逐一替换
  *   - 任何步骤失败均静默保留原行，不影响其他行
  *
  * @param logText 原始字段内容字符串

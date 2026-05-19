@@ -10,14 +10,24 @@
 #include <zlib.h>
 
 // cfg.json 中的 key 名称
-static NSString * const kCfgKeyHex   = @"KEY";
-static NSString * const kCfgKeyField = @"field";
+static NSString * const kCfgKeyHex    = @"KEY";
+static NSString * const kCfgKeyHexOld = @"KEY_OLD";
+static NSString * const kCfgKeyField  = @"field";
 static NSString * const kDefaultFieldName = @"log";
 
-// 密文行前缀：日志中每个需要解密的行格式为 "i.<Base64密文>"
-// 完整行示例：\ni.ABC123==\n
-static NSString * const kLinePrefixLF   = @"\ni.";
-static NSString * const kLinePrefixCRLF = @"\r\ni.";
+// 密文行前缀（完整行示例：\ni.ABC123==\n）
+static NSString * const kLinePrefixILF   = @"\ni.";
+static NSString * const kLinePrefixICRLF = @"\r\ni.";
+static NSString * const kLinePrefixALF   = @"\na.";
+static NSString * const kLinePrefixACRLF = @"\r\na.";
+static NSString * const kLinePrefixOLF   = @"\no.";
+static NSString * const kLinePrefixOCRLF = @"\r\no.";
+
+typedef NS_ENUM(NSUInteger, SPLogEncryptFormat) {
+    SPLogEncryptFormatI, // KEY:     Base64 → AES → Gzip → UTF-8
+    SPLogEncryptFormatA, // KEY_OLD: Base64 → AES → Base64 → Gzip → UTF-8
+    SPLogEncryptFormatO, // KEY_OLD: Base64 → AES → UTF-8
+};
 
 // 与 encColor 缓存联动：仅在 _loadCfg 真正从磁盘读入后自增
 static NSUInteger s_cfgDiskReadSerial = 0;
@@ -107,14 +117,26 @@ static BOOL s_cfgDiskReadRequired = YES;
     (void)[self _loadCfg];
 }
 
-+ (BOOL)containsEncryptedContent:(NSString *)text {
-    if (text.length == 0) return NO;
-    return ([text rangeOfString:kLinePrefixLF].location != NSNotFound
-            || [text rangeOfString:kLinePrefixCRLF].location != NSNotFound);
++ (BOOL)_text:(NSString *)text containsAnyPrefix:(NSArray<NSString *> *)prefixes {
+    for (NSString *prefix in prefixes) {
+        if ([text rangeOfString:prefix].location != NSNotFound) {
+            return YES;
+        }
+    }
+    return NO;
 }
 
-+ (nullable NSData *)_aesKeyFromCfg:(NSDictionary *)cfg {
-    id keyVal = cfg[kCfgKeyHex];
++ (BOOL)containsEncryptedContent:(NSString *)text {
+    if (text.length == 0) return NO;
+    return [self _text:text containsAnyPrefix:@[
+        kLinePrefixILF, kLinePrefixICRLF,
+        kLinePrefixALF, kLinePrefixACRLF,
+        kLinePrefixOLF, kLinePrefixOCRLF,
+    ]];
+}
+
++ (nullable NSData *)_aesKeyFromCfg:(NSDictionary *)cfg keyName:(NSString *)keyName {
+    id keyVal = cfg[keyName];
     if (![keyVal isKindOfClass:[NSString class]]) return nil;
 
     NSData *keyData = [NSData dataWithHexString:(NSString *)keyVal];
@@ -198,12 +220,10 @@ static BOOL s_cfgDiskReadRequired = YES;
 
 /**
  * 在 text 中查找前缀为 linePrefix（如 "\ni."）的行，
- * 提取 "i." 之后到行尾的 Base64 内容。
+ * 提取标记（"i." / "a." / "o."）之后到行尾的 Base64 内容。
  *
- * 返回的 outLineRange 是 "i.<base64>" 在原字符串中的范围（不含前导换行），
- * 用于后续替换。若未找到返回 NSNotFound。
- *
- * 支持一次调用只处理第一个匹配行；日志中有多个加密行时可循环调用。
+ * 返回的 range 是 "x.<base64>" 在 text 参数中的范围（不含前导换行），用于后续替换。
+ * 支持一次调用只处理第一个匹配行；循环调用可收集多行。
  */
 + (NSRange)_encryptedLineRangeInText:(NSString *)text
                            linePrefix:(NSString *)linePrefix
@@ -213,17 +233,13 @@ static BOOL s_cfgDiskReadRequired = YES;
         return NSMakeRange(NSNotFound, 0);
     }
 
-    // Base64 内容从 "i." 后面开始（跳过前导 \n 或 \r\n，但 "i." 本身保留在替换范围内）
-    // linePrefix = "\ni." → Base64起点 = prefixRange.location + prefixRange.length
-    // 替换范围起点 = prefixRange.location + 1（跳过 \n，从 "i." 开始）
-    NSUInteger newlineLen  = [linePrefix hasPrefix:@"\r\n"] ? 2 : 1; // \r\n 或 \n
-    NSUInteger lineStart   = prefixRange.location + newlineLen;       // "i." 的位置
-    NSUInteger base64Start = NSMaxRange(prefixRange);                  // "i." 之后
+    NSUInteger newlineLen  = [linePrefix hasPrefix:@"\r\n"] ? 2 : 1;
+    NSUInteger lineStart   = prefixRange.location + newlineLen;
+    NSUInteger base64Start = NSMaxRange(prefixRange);
 
     NSUInteger textLen = text.length;
     if (base64Start >= textLen) return NSMakeRange(NSNotFound, 0);
 
-    // 取到行尾（\n 或 \r\n 之前），不包含换行符本身
     NSCharacterSet *newlines = [NSCharacterSet newlineCharacterSet];
     NSRange nlRange = [text rangeOfCharacterFromSet:newlines
                                             options:0
@@ -237,16 +253,44 @@ static BOOL s_cfgDiskReadRequired = YES;
     if (b64.length == 0) return NSMakeRange(NSNotFound, 0);
 
     if (outBase64) *outBase64 = b64;
-    // 替换范围：从 "i." 开始到 Base64 内容末尾（不含换行）
     return NSMakeRange(lineStart, base64End - lineStart);
+}
+
++ (void)_collectEncryptedLinesInText:(NSString *)fullText
+                          linePrefix:(NSString *)linePrefix
+                              format:(SPLogEncryptFormat)format
+                          intoRanges:(NSMutableArray<NSValue *> *)ranges
+                             base64s:(NSMutableArray<NSString *> *)b64List
+                             formats:(NSMutableArray<NSNumber *> *)formatList {
+    NSUInteger searchFrom = 0;
+    while (searchFrom < fullText.length) {
+        NSString *remaining = [fullText substringFromIndex:searchFrom];
+        NSString *b64 = nil;
+        NSRange rel = [self _encryptedLineRangeInText:remaining
+                                           linePrefix:linePrefix
+                                         base64String:&b64];
+        if (rel.location == NSNotFound) break;
+
+        NSRange absRange = NSMakeRange(searchFrom + rel.location, rel.length);
+        [ranges addObject:[NSValue valueWithRange:absRange]];
+        [b64List addObject:b64];
+        [formatList addObject:@(format)];
+        searchFrom = NSMaxRange(absRange);
+    }
 }
 
 #pragma mark - 单行解密
 
-+ (nullable NSString *)_decryptBase64Line:(NSString *)base64 key:(NSData *)keyData {
++ (nullable NSData *)_cipherDataFromBase64:(NSString *)base64 {
     NSData *cipherData = [[NSData alloc] initWithBase64EncodedString:base64
                                                              options:NSDataBase64DecodingIgnoreUnknownCharacters];
     if (!cipherData || cipherData.length == 0) return nil;
+    return cipherData;
+}
+
++ (nullable NSData *)_aesDecryptBase64:(NSString *)base64 key:(NSData *)keyData {
+    NSData *cipherData = [self _cipherDataFromBase64:base64];
+    if (!cipherData) return nil;
 
     NSData *decrypted = nil;
     @try {
@@ -254,78 +298,132 @@ static BOOL s_cfgDiskReadRequired = YES;
     } @catch (NSException *e) {
         return nil;
     }
+    return decrypted;
+}
+
++ (nullable NSString *)_utf8PlainTextValidatingBytes:(NSData *)data {
+    if (!data || data.length == 0) return nil;
+
+    NSString *plainText = [[NSString alloc] initWithData:data encoding:NSUTF8StringEncoding];
+    if (!plainText) return nil;
+
+    NSData *reEncoded = [plainText dataUsingEncoding:NSUTF8StringEncoding];
+    if (!reEncoded || reEncoded.length != data.length) return nil;
+
+    return plainText;
+}
+
++ (nullable NSString *)_decryptBase64LineFormatI:(NSString *)base64 key:(NSData *)keyData {
+    NSData *decrypted = [self _aesDecryptBase64:base64 key:keyData];
     if (!decrypted) return nil;
 
     NSData *unzipped = [self _gunzip:decrypted];
     if (!unzipped) return nil;
 
-    NSString *plainText = [[NSString alloc] initWithData:unzipped encoding:NSUTF8StringEncoding];
-    if (!plainText) return nil;
+    return [self _utf8PlainTextValidatingBytes:unzipped];
+}
 
-    // 字节一致性校验，防止替换字符（U+FFFD）悄悄混入
-    NSData *reEncoded = [plainText dataUsingEncoding:NSUTF8StringEncoding];
-    if (!reEncoded || reEncoded.length != unzipped.length) return nil;
++ (nullable NSString *)_decryptBase64LineFormatA:(NSString *)base64 key:(NSData *)keyData {
+    NSData *decrypted = [self _aesDecryptBase64:base64 key:keyData];
+    if (!decrypted) return nil;
 
-    return plainText;
+    NSString *innerB64 = [[NSString alloc] initWithData:decrypted encoding:NSUTF8StringEncoding];
+    if (!innerB64) return nil;
+    innerB64 = [innerB64 stringByTrimmingCharactersInSet:[NSCharacterSet whitespaceAndNewlineCharacterSet]];
+    if (innerB64.length == 0) return nil;
+
+    NSData *innerData = [[NSData alloc] initWithBase64EncodedString:innerB64
+                                                            options:NSDataBase64DecodingIgnoreUnknownCharacters];
+    if (!innerData || innerData.length == 0) return nil;
+
+    NSData *unzipped = [self _gunzip:innerData];
+    if (!unzipped) return nil;
+
+    return [self _utf8PlainTextValidatingBytes:unzipped];
+}
+
++ (nullable NSString *)_decryptBase64LineFormatO:(NSString *)base64 key:(NSData *)keyData {
+    NSData *decrypted = [self _aesDecryptBase64:base64 key:keyData];
+    if (!decrypted) return nil;
+
+    return [self _utf8PlainTextValidatingBytes:decrypted];
+}
+
++ (nullable NSString *)_decryptLine:(NSString *)base64
+                             format:(SPLogEncryptFormat)format
+                                key:(NSData *)keyData {
+    switch (format) {
+        case SPLogEncryptFormatI:
+            return [self _decryptBase64LineFormatI:base64 key:keyData];
+        case SPLogEncryptFormatA:
+            return [self _decryptBase64LineFormatA:base64 key:keyData];
+        case SPLogEncryptFormatO:
+            return [self _decryptBase64LineFormatO:base64 key:keyData];
+    }
 }
 
 #pragma mark - 主入口
 
 + (NSString *)displayStringForLogText:(NSString *)logText {
     if (logText.length == 0) return logText;
+    if (![self containsEncryptedContent:logText]) return logText;
 
     NSDictionary *cfg = [self _loadCfg];
     if (!cfg) return logText;
 
-    NSData *keyData = [self _aesKeyFromCfg:cfg];
-    if (!keyData) return logText;
+    NSData *keyData    = [self _aesKeyFromCfg:cfg keyName:kCfgKeyHex];
+    NSData *keyOldData = [self _aesKeyFromCfg:cfg keyName:kCfgKeyHexOld];
 
-    // 确定行前缀风格（LF 或 CRLF），优先 LF
-    NSString *linePrefix = nil;
-    if ([logText rangeOfString:kLinePrefixLF].location != NSNotFound) {
-        linePrefix = kLinePrefixLF;
-    } else if ([logText rangeOfString:kLinePrefixCRLF].location != NSNotFound) {
-        linePrefix = kLinePrefixCRLF;
-    }
-    if (!linePrefix) return logText;
-
-    // 支持日志中有多行需要解密：从后往前替换，避免 range 偏移
-    NSMutableString *result = [logText mutableCopy];
-    NSMutableArray<NSValue *> *ranges   = [NSMutableArray array];
+    NSMutableArray<NSValue *> *ranges    = [NSMutableArray array];
     NSMutableArray<NSString *> *b64List = [NSMutableArray array];
+    NSMutableArray<NSNumber *> *formatList = [NSMutableArray array];
 
-    // 收集所有加密行的位置（在原字符串中查找）
-    NSUInteger searchFrom = 0;
-    while (searchFrom < logText.length) {
-        NSString *remaining = [logText substringFromIndex:searchFrom];
-        NSString *b64 = nil;
-        NSRange   rel = [self _encryptedLineRangeInText:remaining
-                                             linePrefix:linePrefix
-                                            base64String:&b64];
-        if (rel.location == NSNotFound) break;
-
-        // 转换为原字符串中的绝对 range
-        NSRange absRange = NSMakeRange(searchFrom + rel.location, rel.length);
-        [ranges addObject:[NSValue valueWithRange:absRange]];
-        [b64List addObject:b64];
-        searchFrom = absRange.location + absRange.length;
-    }
+    [self _collectEncryptedLinesInText:logText linePrefix:kLinePrefixILF   format:SPLogEncryptFormatI intoRanges:ranges base64s:b64List formats:formatList];
+    [self _collectEncryptedLinesInText:logText linePrefix:kLinePrefixICRLF format:SPLogEncryptFormatI intoRanges:ranges base64s:b64List formats:formatList];
+    [self _collectEncryptedLinesInText:logText linePrefix:kLinePrefixALF   format:SPLogEncryptFormatA intoRanges:ranges base64s:b64List formats:formatList];
+    [self _collectEncryptedLinesInText:logText linePrefix:kLinePrefixACRLF format:SPLogEncryptFormatA intoRanges:ranges base64s:b64List formats:formatList];
+    [self _collectEncryptedLinesInText:logText linePrefix:kLinePrefixOLF   format:SPLogEncryptFormatO intoRanges:ranges base64s:b64List formats:formatList];
+    [self _collectEncryptedLinesInText:logText linePrefix:kLinePrefixOCRLF format:SPLogEncryptFormatO intoRanges:ranges base64s:b64List formats:formatList];
 
     if (ranges.count == 0) return logText;
 
-    // 从后往前替换，保持前面行的 range 有效
+    // 按起始位置从大到小排序，从后往前替换
+    NSMutableArray<NSNumber *> *indices = [NSMutableArray arrayWithCapacity:ranges.count];
+    for (NSUInteger i = 0; i < ranges.count; i++) {
+        [indices addObject:@(i)];
+    }
+    [indices sortUsingComparator:^NSComparisonResult(NSNumber *a, NSNumber *b) {
+        NSRange ra = [ranges[a.unsignedIntegerValue] rangeValue];
+        NSRange rb = [ranges[b.unsignedIntegerValue] rangeValue];
+        if (ra.location > rb.location) return NSOrderedAscending;
+        if (ra.location < rb.location) return NSOrderedDescending;
+        return NSOrderedSame;
+    }];
+
+    NSMutableString *result = [logText mutableCopy];
     BOOL anyReplaced = NO;
-    for (NSInteger i = (NSInteger)ranges.count - 1; i >= 0; i--) {
-        NSRange range    = [ranges[(NSUInteger)i] rangeValue];
-        NSString *b64    = b64List[(NSUInteger)i];
-        NSString *plain  = [self _decryptBase64Line:b64 key:keyData];
-        if (!plain) continue; // 解密失败：保留原文
-        
+
+    for (NSNumber *idxNum in indices) {
+        NSUInteger i = idxNum.unsignedIntegerValue;
+        NSRange range = [ranges[i] rangeValue];
+        NSString *b64 = b64List[i];
+        SPLogEncryptFormat format = (SPLogEncryptFormat)formatList[i].unsignedIntegerValue;
+
+        NSData *key = nil;
+        if (format == SPLogEncryptFormatI) {
+            key = keyData;
+        } else {
+            key = keyOldData;
+        }
+        if (!key) continue;
+
+        NSString *plain = [self _decryptLine:b64 format:format key:key];
+        if (!plain) continue;
+
         NSString *replacement = [NSString stringWithFormat:
-            (@"\n============= [DECRYPT TXT BEGIN] =============\n\n"
-            @"%@"
-             @"\n\n============= [ DECRYPT TXT END ] =============\n"
-             ),
+            (@"\n------------------BEGIN DECRYPTION------------------\n\n"
+             @"%@"
+             @"\n\n------------------END DECRYPTION------------------\n"),
             plain];
         [result replaceCharactersInRange:range withString:replacement];
         anyReplaced = YES;
