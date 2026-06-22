@@ -3328,7 +3328,7 @@
 				SCRIPTS_DIR = "$(SRCROOT)/Scripts";
 				SDKROOT = macosx;
 				SWIFT_OBJC_INTERFACE_HEADER_NAME = "$(PROJECT_NAME)-Swift.h";
-				VALID_ARCHS = arm64;
+				VALID_ARCHS = "arm64 x86_64";
 				VERSIONING_SYSTEM = "apple-generic";
 				WARNING_CFLAGS = "-Wmost";
 			};
@@ -3338,6 +3338,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLY_RULES_IN_COPY_HEADERS = NO;
+				ARCHS = (
+					"$(ARCHS_STANDARD)",
+					x86_64,
+				);
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = "";
@@ -3636,7 +3640,7 @@
 				SDKROOT = macosx;
 				STRIP_INSTALLED_PRODUCT = NO;
 				SWIFT_OBJC_INTERFACE_HEADER_NAME = "$(PROJECT_NAME)-Swift.h";
-				VALID_ARCHS = arm64;
+				VALID_ARCHS = "arm64 x86_64";
 				VERSIONING_SYSTEM = "apple-generic";
 				WARNING_CFLAGS = "-Wmost";
 			};
@@ -3646,6 +3650,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLY_RULES_IN_COPY_HEADERS = NO;
+				ARCHS = (
+					"$(ARCHS_STANDARD)",
+					x86_64,
+				);
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = "";
@@ -3788,6 +3796,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLY_RULES_IN_COPY_HEADERS = NO;
+				ARCHS = (
+					"$(ARCHS_STANDARD)",
+					x86_64,
+				);
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = "";
@@ -3839,6 +3851,10 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				APPLY_RULES_IN_COPY_HEADERS = NO;
+				ARCHS = (
+					"$(ARCHS_STANDARD)",
+					x86_64,
+				);
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
 				CODE_SIGN_ENTITLEMENTS = "";
@@ -3966,7 +3982,7 @@
 				SDKROOT = macosx;
 				STRIP_INSTALLED_PRODUCT = NO;
 				SWIFT_OBJC_INTERFACE_HEADER_NAME = "$(PROJECT_NAME)-Swift.h";
-				VALID_ARCHS = arm64;
+				VALID_ARCHS = "arm64 x86_64";
 				VERSIONING_SYSTEM = "apple-generic";
 				WARNING_CFLAGS = "-Wmost";
 			};
@@ -4045,7 +4061,7 @@
 				SDKROOT = macosx;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				SWIFT_OBJC_INTERFACE_HEADER_NAME = "$(PROJECT_NAME)-Swift.h";
-				VALID_ARCHS = arm64;
+				VALID_ARCHS = "arm64 x86_64";
 				VERSIONING_SYSTEM = "apple-generic";
 				WARNING_CFLAGS = "-Wmost";
 			};
